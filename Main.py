@@ -65,8 +65,7 @@ def draw(surface, gameinfo):
         for piece, image in zip([Piece.Pawn, Piece.Rook, Piece.Bishop], 
                                     [(whitePawnImage, blackPawnImage),
                                     (whiteRookImage, blackRookImage),
-                                    (whiteBishopImage, blackBishopImage)]
-                                ):
+                                    (whiteBishopImage, blackBishopImage)]):
             
             if isinstance(i, piece):
                 if i.side == "WHITE":

@@ -73,6 +73,19 @@ class Piece(ABC):
     @abstractmethod
     def getMoveset(self): #TODO make sure all pieces have boundary checking
         pass
+        
+    @abstractmethod
+    def movesetFromList(self, posiions):
+        moveset = []
+        for i in posiions:
+            if any(i in row for row in self.gameinfo.board):
+                nextPiece = i.isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
+                if nextPiece:
+                    if nextPiece.side == self.side:
+                        continue
+                moveset.append(i)
+
+        return moveset
 
 
         
@@ -185,7 +198,7 @@ class Bishop(Piece):
 
         for i in range(1, 8):
             for pieceName, offset in zip(isBlocked, [(i, -i),(i, i),(-i, -i),(-i, i)]):
-                
+
                 if self.y + offset[0] < 0 or self.y + offset[0] > 7 or self.x + offset[1] < 0 or self.x + offset[1] > 7:
                     continue
 
@@ -202,3 +215,59 @@ class Bishop(Piece):
                     moveset.append(Position(self.x + offset[1], self.y + offset[0]))
 
         return moveset
+    
+class Queen(Piece):
+    def __init__(self, side, x, y, gameinfo):
+        super().__init__(side, x, y, gameinfo)
+
+    def move(self, option):
+        super().move(option)
+
+    def getMoveset(self):
+        tempRook = Rook(self.side, self.x, self.y, self.gameinfo)
+        tempBishop = Bishop(self.side, self.x, self.y, self.gameinfo)
+
+        moveset = tempRook.getMoveset() + tempBishop.getMoveset()
+        return moveset
+    
+class Knight(Piece):
+
+    def __init__(self, side, x, y, gameinfo):
+        super().__init__(side, x, y, gameinfo)
+
+    def move(self, option):
+        super().move(option)
+
+    def getMoveset(self):
+        movements = []
+        for xOffset in [-2, -1, 1, 2]:
+            for yOffset in [-2, -1, 1, 2]:
+                if abs(xOffset) != abs(yOffset):
+                    movements.append(Position(self.x + xOffset, self.y + yOffset))
+        moveset = self.movesetFromList(movements)
+        return moveset
+
+
+class King(Piece):
+
+    def __init__(self, side, x, y, gameinfo):
+        super().__init__(side, x, y, gameinfo)
+        self.firstMove = True
+
+    def move(self, option):
+        #TODO handle castling
+        super().move(option)
+
+        self.firstMove = False
+
+    def getMoveset(self):
+        movements = []
+        for xOffset in range(-1, 2):
+            for yOffset in range(-1, 2):
+                if xOffset == 0 and yOffset == 0:
+                    continue
+                movements.append(Position(self.x + xOffset, self.y + yOffset))
+        moveset = self.movesetFromList(movements)
+        return moveset
+    
+
