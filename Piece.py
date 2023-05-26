@@ -37,7 +37,7 @@ class Position:
     def __str__(self):
         return f"X: {self.x} Y: {self.y}"
 
-class Piece(ABC):
+class Piece(ABC): 
 
     @abstractmethod
     def __init__(self, side,x, y, gameinfo):
@@ -71,7 +71,7 @@ class Piece(ABC):
         self.y = option.y
 
     @abstractmethod
-    def getMoveset(self):
+    def getMoveset(self): #TODO make sure all pieces have boundary checking
         pass
 
 
@@ -185,6 +185,10 @@ class Bishop(Piece):
 
         for i in range(1, 8):
             for pieceName, offset in zip(isBlocked, [(i, -i),(i, i),(-i, -i),(-i, i)]):
+                
+                if self.y + offset[0] < 0 or self.y + offset[0] > 7 or self.x + offset[1] < 0 or self.x + offset[1] > 7:
+                    continue
+
                 if not isBlocked[pieceName]:
                     nextPiece[pieceName] = self.gameinfo.board[self.y + offset[0]][self.x + offset[1]].isOccupied(self.gameinfo.board.blackList + self.gameinfo.board.whiteList)
                 else: 
