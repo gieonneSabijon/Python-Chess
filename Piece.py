@@ -160,12 +160,41 @@ class Rook(Piece):
         for i in searchList:
             for j in i:
                 nextPiece = j.isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
-                if nextPiece.side == self.side:
+                if nextPiece:
+                    if nextPiece.side != self.side:
+                        moveset.append(j)
                     break
                 else:
                     moveset.append(j)
-                    if nextPiece.side != self.side:
-                        break
+
+        return moveset
             
 
+class Bishop(Piece):
 
+    def __init__(self, side, x, y, gameinfo):
+        super().__init__(side, x, y, gameinfo)
+
+    def move(self, option):
+        return super().move(option)
+    
+    def getMoveset(self):
+        moveset = []
+        nextPiece = {}
+        isBlocked = {'topLeft': False, 'topRight': False, 'bottomleft': False, 'bottomRight': False}
+
+        for i in range(1, 8):
+            for pieceName, offset in zip(isBlocked, [(i, -i),(i, i),(-i, -i),(-i, i)]):
+                if not isBlocked[pieceName]:
+                    nextPiece[pieceName] = self.gameinfo.board[self.y + offset[0]][self.x + offset[1]].isOccupied(self.gameinfo.board.blackList + self.gameinfo.board.whiteList)
+                else: 
+                    nextPiece[pieceName] = None
+
+                if nextPiece[pieceName]:
+                    isBlocked[pieceName] = True
+                    if nextPiece[pieceName].side != self.side:
+                        moveset.append(Position(nextPiece[pieceName].x, nextPiece[pieceName].y))
+                else:
+                    moveset.append(Position(self.x + offset[1], self.y + offset[0]))
+
+        return moveset

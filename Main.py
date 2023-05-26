@@ -48,6 +48,8 @@ def draw(surface, gameinfo):
     blackPawnImage = pygame.image.load('Assets/Black Pawn.png')
     whiteRookImage = pygame.image.load('Assets/White Rook.png')
     blackRookImage = pygame.image.load('Assets/Black Rook.png')
+    whiteBishopImage = pygame.image.load('Assets/White Bishop.png')
+    blackBishopImage = pygame.image.load('Assets/Black Bishop.png')
 
     pieceRect = whitePawnImage.get_rect()
     pieceImage = None
@@ -60,16 +62,17 @@ def draw(surface, gameinfo):
 
     for i in (gameinfo.whiteList + gameinfo.blackList):
         pieceRect.topleft = (i.x * 64, 448 - i.y * 64)
-        if isinstance(i, Piece.Pawn):
-            if i.side == "WHITE":
-                pieceImage = whitePawnImage
-            else:
-                pieceImage = blackPawnImage
-        elif isinstance(i, Piece.Rook):
-            if i.side == "WHITE":
-                pieceImage = whiteRookImage
-            else:
-                pieceImage = blackRookImage
+        for piece, image in zip([Piece.Pawn, Piece.Rook, Piece.Bishop], 
+                                    [(whitePawnImage, blackPawnImage),
+                                    (whiteRookImage, blackRookImage),
+                                    (whiteBishopImage, blackBishopImage)]
+                                ):
+            
+            if isinstance(i, piece):
+                if i.side == "WHITE":
+                    pieceImage = image[0]
+                else:
+                    pieceImage = image[1]
 
         if pieceImage:
             surface.blit(pieceImage, pieceRect)
@@ -90,6 +93,8 @@ def pieceSetup(side, gameinfo):
 
     pieces.append(Piece.Rook(side, 0, pieceY, gameinfo))
     pieces.append(Piece.Rook(side, 7, pieceY, gameinfo))
+    pieces.append(Piece.Bishop(side, 2, pieceY, gameinfo))
+    pieces.append(Piece.Bishop(side, 5, pieceY, gameinfo))
 
     return pieces
     
