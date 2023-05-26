@@ -74,7 +74,7 @@ class Piece(ABC):
     def getMoveset(self): #TODO make sure all pieces have boundary checking
         pass
         
-    @abstractmethod
+
     def movesetFromList(self, posiions):
         moveset = []
         for i in posiions:
@@ -140,7 +140,7 @@ class Pawn(Piece):
             moveset.append(self.gameinfo.board[self.y + yOffset][self.x - 1])
         if killRight:
             moveset.append(self.gameinfo.board[self.y + yOffset][self.x + 1])
-
+        #TODO add en passant
         return moveset
     
     
@@ -148,9 +148,11 @@ class Rook(Piece):
 
     def __init__(self, side, x, y, gameinfo):
         super().__init__(side, x, y, gameinfo)
+        self.firstMove = True
 
     def move(self, option):
         super().move(option)
+        self.firstMove = False
 
     def getMoveset(self):
         moveset = []
@@ -181,6 +183,10 @@ class Rook(Piece):
                     moveset.append(j)
 
         return moveset
+    
+    def castle(self):
+        #TODO add logic and call this method from king move
+        pass
             
 
 class Bishop(Piece):
@@ -244,7 +250,7 @@ class Knight(Piece):
             for yOffset in [-2, -1, 1, 2]:
                 if abs(xOffset) != abs(yOffset):
                     movements.append(Position(self.x + xOffset, self.y + yOffset))
-        moveset = self.movesetFromList(movements)
+        moveset = super.movesetFromList(movements)
         return moveset
 
 
@@ -255,7 +261,8 @@ class King(Piece):
         self.firstMove = True
 
     def move(self, option):
-        #TODO handle castling
+        #TODO check if move was a castle then call the rooks castle function
+
         super().move(option)
 
         self.firstMove = False
@@ -267,7 +274,84 @@ class King(Piece):
                 if xOffset == 0 and yOffset == 0:
                     continue
                 movements.append(Position(self.x + xOffset, self.y + yOffset))
-        moveset = self.movesetFromList(movements)
+        moveset = super.movesetFromList(movements)
+
+        #Castling Logic
+        if self.firstMove:
+            currentRow = self.gameinfo.board[self.y]
+            leftClear = True
+            rightClear = True
+            for i in range(1, 4):
+                if currentRow[i].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList):
+                    leftClear = False
+
+            for i in range(5, 7):
+                if currentRow[i].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList):
+                    rightClear = False 
+            
+            leftRook = currentRow[0].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
+            rightRook = currentRow[7].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
+
+            if leftRook.firstMove and leftClear:
+                moveset.append(currentRow[2])
+            elif rightRook.firstMove and rightClear:
+                moveset.append(currentRow[6])
+
+        enemyList = []
+        if self.side == "WHITE":
+            enemyList = self.gameinfo.blackList
+        else:
+            enemyList = self.gameinfo.whiteList
+
+        for move in moveset:
+
+            enemy = move.isOccupied(enemyList)
+            if enemy:
+                if isinstance(enemy, King):
+                    moveset.remove(move)
+                    continue
+
+            tempKing = King(self.side, move.x, move.y, self.gameinfo)
+            if tempKing.isInCheck():
+                moveset.remove(move)
+            
+
         return moveset
     
+    def isInCheck(self):
+        check = False
+        enemyList = []
+        enemyDict = {'queen': [], 'rook': [], 'bishop': [], 'knight': [], 'pawn': []}
+        if self.side == "WHITE":
+            enemyList = self.gameinfo.blackList
+        else:
+            enemyList = self.gameinfo.whiteList
+
+        for piece in enemyList:
+            if isinstance(piece, Queen):
+                enemyDict['queen'].append(piece)
+            elif isinstance(piece, Rook):
+                enemyDict['rook'].append(piece)
+            elif isinstance(piece, Bishop):
+                enemyDict['bishop'].append(piece)
+            elif isinstance(piece, Knight):
+                enemyDict['knight'].append(piece)
+            elif isinstance(piece, Pawn):
+                enemyDict['pawn'].append(piece)
+
+        tempQueen = Queen(self.side, self.x, self.y, self.gameinfo)
+        tempRook = Rook(self.side, self.x, self.y, self.gameinfo)
+        tempBishop = Bishop(self.side, self.x, self.y, self.gameinfo)
+        tempKnight = Knight(self.side, self.x, self.y, self.gameinfo)
+        tempPawn = Pawn(self.side, self.x, self.y, self.gameinfo)
+
+        for piece, enemyPiece in zip([tempQueen, tempRook, tempBishop, tempKnight, tempPawn], enemyDict):
+            for move in piece.getMoveset():
+                if move.isOccupied(enemyDict[enemyPiece]) and (piece is not tempPawn or move.x != self.x):
+                    check = True  
+        return check
+
+        
+    
+    #TODO for checkmakes we can check for a isInCheck and then check to see if length of moveset is 0  and then check if anything can block it (we only need to check bishops and rook paths from king position)
 
