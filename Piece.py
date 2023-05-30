@@ -7,6 +7,7 @@ class gameInfo:
         cls.whiteList = whiteList
         cls.blackList = blackList
         cls.graveyard = graveyard
+        cls.moveset = []
 
     @classmethod
     def updateList(cls, side, pieceList):
@@ -75,17 +76,25 @@ class Piece(ABC):
         pass
         
 
-    def movesetFromList(self, posiions):
+    def movesetFromList(current, posiions):
         moveset = []
         for i in posiions:
-            if any(i in row for row in self.gameinfo.board):
-                nextPiece = i.isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
-                if nextPiece:
-                    if nextPiece.side == self.side:
-                        continue
-                moveset.append(i)
-
+            for row in current.gameinfo.board:
+                for cell in row:
+                    if i.x == cell.x and i.y == cell.y:
+                        nextPiece = i.isOccupied(current.gameinfo.blackList + current.gameinfo.whiteList)
+                        if nextPiece:
+                            if nextPiece.side == current.side:
+                                continue
+                        moveset.append(cell)
         return moveset
+    
+    def setRect(self, rect):
+        self.rect = rect
+
+    @abstractmethod
+    def __str__(self):
+        pass
 
 
         
@@ -126,22 +135,26 @@ class Pawn(Piece):
             yOffset = -1
             pieceList = self.gameinfo.whiteList
 
+        if self.y + yOffset >= 0 and self.y + yOffset < 8:
+            if not self.gameinfo.board[self.y + yOffset][self.x].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList):
+                moveset.append(self.gameinfo.board[self.y + yOffset][self.x])
+                
 
-        if not self.gameinfo.board[self.y + yOffset][self.x].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList):
-            moveset.append(self.gameinfo.board[self.y + yOffset][self.x])
+                if self.firstMove:
+                    moveset.append(self.gameinfo.board[self.y + yOffset * 2][self.x])
 
-        if self.firstMove:
-            moveset.append(self.gameinfo.board[self.y + yOffset * 2][self.x])
+            killLeft = self.gameinfo.board[self.y + yOffset][self.x - 1].isOccupied(pieceList)
+            killRight = self.gameinfo.board[self.y + yOffset][self.x + 1].isOccupied(pieceList)
 
-        killLeft = self.gameinfo.board[self.y + yOffset][self.x - 1].isOccupied(pieceList)
-        killRight = self.gameinfo.board[self.y + yOffset][self.x + 1].isOccupied(pieceList)
-
-        if killLeft:
-            moveset.append(self.gameinfo.board[self.y + yOffset][self.x - 1])
-        if killRight:
-            moveset.append(self.gameinfo.board[self.y + yOffset][self.x + 1])
+            if killLeft:
+                moveset.append(self.gameinfo.board[self.y + yOffset][self.x - 1])
+            if killRight:
+                moveset.append(self.gameinfo.board[self.y + yOffset][self.x + 1])
         #TODO add en passant
         return moveset
+    
+    def __str__(self):
+        return f'{self.side} Pawn {self.gameinfo.board[self.y][self.x]}'
     
     
 class Rook(Piece):
@@ -188,6 +201,8 @@ class Rook(Piece):
         #TODO add logic and call this method from king move
         pass
             
+    def __str__(self):
+        return f'{self.side} Rook {self.gameinfo.board[self.y][self.x]}'
 
 class Bishop(Piece):
 
@@ -199,28 +214,49 @@ class Bishop(Piece):
     
     def getMoveset(self):
         moveset = []
-        nextPiece = {}
-        isBlocked = {'topLeft': False, 'topRight': False, 'bottomleft': False, 'bottomRight': False}
+        isBlocked = {'topLeft': False, 'topRight': False, 'bottomLeft': False, 'bottomRight': False}
+        #top half
+        for i, row in enumerate(self.gameinfo.board[self.y + 1:]):
+            for key, pieceIndex in zip(['topLeft', 'topRight'], [(self.x + (-i - 1)), (self.x + (i + 1))]):
+                if (pieceIndex < 0):
+                    isBlocked['topLeft'] = True 
+                if (pieceIndex > 7):
+                    isBlocked['topRight'] = True
 
-        for i in range(1, 8):
-            for pieceName, offset in zip(isBlocked, [(i, -i),(i, i),(-i, -i),(-i, i)]):
+                if not isBlocked[key]:
+                    nextPiece = row[pieceIndex].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
+                    if nextPiece:
+                        isBlocked[key] = True
+                        if nextPiece.side != self.side:
+                            moveset.append(row[pieceIndex])
+                    else:
+                        moveset.append(row[pieceIndex])
 
-                if self.y + offset[0] < 0 or self.y + offset[0] > 7 or self.x + offset[1] < 0 or self.x + offset[1] > 7:
-                    continue
+                
 
-                if not isBlocked[pieceName]:
-                    nextPiece[pieceName] = self.gameinfo.board[self.y + offset[0]][self.x + offset[1]].isOccupied(self.gameinfo.board.blackList + self.gameinfo.board.whiteList)
-                else: 
-                    nextPiece[pieceName] = None
+        #bottom half
+        for i, row in enumerate(reversed(self.gameinfo.board[:self.y])):
+            for key, pieceIndex in zip(['bottomLeft', 'bottomRight'], [self.x + (-i - 1), self.x + (i + 1)]):
+                if (pieceIndex < 0):
+                    isBlocked['bottomLeft'] = True 
+                if (pieceIndex > 7):
+                    isBlocked['bottomRight'] = True
 
-                if nextPiece[pieceName]:
-                    isBlocked[pieceName] = True
-                    if nextPiece[pieceName].side != self.side:
-                        moveset.append(Position(nextPiece[pieceName].x, nextPiece[pieceName].y))
-                else:
-                    moveset.append(Position(self.x + offset[1], self.y + offset[0]))
+                if not isBlocked[key]:
+                    nextPiece = row[pieceIndex].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
+                    if nextPiece:
+                        isBlocked[key] = True
+                        if nextPiece.side != self.side:
+                            moveset.append(row[pieceIndex])
+                    else:
+                        moveset.append(row[pieceIndex])
+                
+
 
         return moveset
+    
+    def __str__(self):
+        return f'{self.side} Bishop {self.gameinfo.board[self.y][self.x]}'
     
 class Queen(Piece):
     def __init__(self, side, x, y, gameinfo):
@@ -236,6 +272,9 @@ class Queen(Piece):
         moveset = tempRook.getMoveset() + tempBishop.getMoveset()
         return moveset
     
+    def __str__(self):
+        return f'{self.side} Queen {self.gameinfo.board[self.y][self.x]}'
+    
 class Knight(Piece):
 
     def __init__(self, side, x, y, gameinfo):
@@ -250,8 +289,11 @@ class Knight(Piece):
             for yOffset in [-2, -1, 1, 2]:
                 if abs(xOffset) != abs(yOffset):
                     movements.append(Position(self.x + xOffset, self.y + yOffset))
-        moveset = super.movesetFromList(movements)
+        moveset = Piece.movesetFromList(self, movements)
         return moveset
+    
+    def __str__(self):
+        return f'{self.side} Knight {self.gameinfo.board[self.y][self.x]}'
 
 
 class King(Piece):
@@ -274,7 +316,7 @@ class King(Piece):
                 if xOffset == 0 and yOffset == 0:
                     continue
                 movements.append(Position(self.x + xOffset, self.y + yOffset))
-        moveset = super.movesetFromList(movements)
+        moveset = Piece.movesetFromList(self, movements)
 
         #Castling Logic
         if self.firstMove:
@@ -291,11 +333,12 @@ class King(Piece):
             
             leftRook = currentRow[0].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
             rightRook = currentRow[7].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
-
-            if leftRook.firstMove and leftClear:
-                moveset.append(currentRow[2])
-            elif rightRook.firstMove and rightClear:
-                moveset.append(currentRow[6])
+            if leftRook:
+                if leftRook.firstMove and leftClear:
+                    moveset.append(currentRow[2])
+            if rightRook:
+                if rightRook.firstMove and rightClear:
+                    moveset.append(currentRow[6])
 
         enemyList = []
         if self.side == "WHITE":
@@ -351,7 +394,8 @@ class King(Piece):
                     check = True  
         return check
 
-        
+    def __str__(self):
+        return f'{self.side} King {self.gameinfo.board[self.y][self.x]}'
     
     #TODO for checkmakes we can check for a isInCheck and then check to see if length of moveset is 0  and then check if anything can block it (we only need to check bishops and rook paths from king position)
 
