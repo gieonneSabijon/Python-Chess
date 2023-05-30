@@ -96,9 +96,6 @@ class Piece(ABC):
     def __str__(self):
         pass
 
-
-        
-
 class Pawn(Piece):
     def __init__(self, side, x, y, gameinfo):
         super().__init__(side, x, y, gameinfo)
@@ -159,7 +156,6 @@ class Pawn(Piece):
     
     def __str__(self):
         return f'{self.side} Pawn {self.gameinfo.board[self.y][self.x]}'
-    
     
 class Rook(Piece):
 
@@ -303,12 +299,12 @@ class Knight(Piece):
     def __str__(self):
         return f'{self.side} Knight {self.gameinfo.board[self.y][self.x]}'
 
-
 class King(Piece):
 
     def __init__(self, side, x, y, gameinfo):
         super().__init__(side, x, y, gameinfo)
         self.firstMove = True
+        self.attackers = []
 
     def move(self, option):
         if abs(option.x - self.x) > 1:
@@ -324,6 +320,7 @@ class King(Piece):
         self.firstMove = False
 
     def getMoveset(self):
+        self.attackers = []
         movements = []
         for xOffset in range(-1, 2):
             for yOffset in range(-1, 2):
@@ -405,11 +402,39 @@ class King(Piece):
         for piece, enemyPiece in zip([tempQueen, tempRook, tempBishop, tempKnight, tempPawn], enemyDict):
             for move in piece.getMoveset():
                 if move.isOccupied(enemyDict[enemyPiece]) and (piece is not tempPawn or move.x != self.x):
+                    self.attackers.append(enemyDict[enemyPiece])
                     check = True  
         return check
+    
+
+    def isInCheckmate(self):
+        if not self.isInCheck() or len(self.getMoveset()) > 0: #The King has to have no moves and be in check
+            return False
+        
+        if self.side == "WHITE":
+            pieceList = self.gameinfo.whiteList
+        else:
+            pieceList = self.gameinfo.blackList
+
+        tempQueen = Queen(self.side, self.x, self.y, self.gameinfo)
+        tempRook = Rook(self.side, self.x, self.y, self.gameinfo)
+        tempBishop = Bishop(self.side, self.x, self.y, self.gameinfo)
+        tempKnight = Knight(self.side, self.x, self.y, self.gameinfo)
+        tempPawn = Pawn(self.side, self.x, self.y, self.gameinfo)
+
+        for attacker in self.attackers:
+            for tempPiece in [tempQueen, tempRook, tempBishop, tempKnight, tempPawn]:
+                if isinstance(attacker, type(tempPiece)):
+                    intersecting = list(set(attacker.getMoveset()).intersection(tempPiece.getMoveset()))
+                    intersecting.append(self.gameinfo.board[attacker.y][attacker.x])
+                    for ally in pieceList:
+                        if not isinstance(ally, King):
+                            allyBlockPath = list(set(intersecting).intersection(ally.getMoveset()))
+                            if len(allyBlockPath) > 0:
+                                return False
+
+        return True
 
     def __str__(self):
         return f'{self.side} King {self.gameinfo.board[self.y][self.x]}'
-    
-    #TODO for checkmakes we can check for a isInCheck and then check to see if length of moveset is 0  and then check if anything can block it (we only need to check bishops and rook paths from king position)
 

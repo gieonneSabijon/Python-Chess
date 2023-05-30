@@ -25,10 +25,17 @@ def main():
             row.append(Piece.Position(j, i))
         
         board.append(row)
-
+    kings = []
     blackList = pieceSetup("BLACK", currentGame)
     whiteList = pieceSetup("WHITE", currentGame)
+    for team in [whiteList, blackList]:
+        for piece in team:
+            if isinstance(piece, Piece.King):
+                kings.append(piece)
+                break
 
+    
+    
     currentGame.setGame(board, whiteList, blackList, [])
     selectedPiece = None
     running = True
@@ -61,6 +68,8 @@ def main():
         if selectedPiece:
             currentGame.moveset = selectedPiece.getMoveset()
         
+        print(f'White King: {kings[0].isInCheckmate()}')
+        print(f'Black King: {kings[1].isInCheckmate()}')
         
         pygame.display.flip()
         draw(screen, currentGame)
