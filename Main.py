@@ -94,6 +94,9 @@ def draw(surface, gameinfo):
             else:
                 pygame.draw.rect(surface, (255, 255, 255), tile)
     
+    for move in gameinfo.moveset:
+        moveRect = Rect(move.x * 64, 448 - move.y * 64, 64, 64)
+        pygame.draw.rect(surface, (0, 255, 0), moveRect, 5)
 
     for i in (gameinfo.whiteList + gameinfo.blackList):
         pieceRect.topleft = (i.x * 64, 448 - i.y * 64)
@@ -117,9 +120,6 @@ def draw(surface, gameinfo):
         if pieceImage:
             surface.blit(pieceImage, pieceRect)
     
-    for move in gameinfo.moveset:
-        moveRect = Rect(move.x * 64, 448 - move.y * 64, 64, 64)
-        pygame.draw.rect(surface, (0, 255, 0), moveRect, 5)
 
 
 def pieceSetup(side, gameinfo):

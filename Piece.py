@@ -72,7 +72,7 @@ class Piece(ABC):
         self.y = option.y
 
     @abstractmethod
-    def getMoveset(self): #TODO make sure all pieces have boundary checking
+    def getMoveset(self): 
         pass
         
 
@@ -128,6 +128,8 @@ class Pawn(Piece):
         moveset = []
         yOffset = 0
         pieceList = []
+        killLeft = None
+        killRight = None
         if self.side == "WHITE":
             yOffset = 1
             pieceList = self.gameinfo.blackList
@@ -140,11 +142,13 @@ class Pawn(Piece):
                 moveset.append(self.gameinfo.board[self.y + yOffset][self.x])
                 
 
-                if self.firstMove:
+                if self.firstMove and not self.gameinfo.board[self.y + yOffset * 2][self.x].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList):
                     moveset.append(self.gameinfo.board[self.y + yOffset * 2][self.x])
-
-            killLeft = self.gameinfo.board[self.y + yOffset][self.x - 1].isOccupied(pieceList)
-            killRight = self.gameinfo.board[self.y + yOffset][self.x + 1].isOccupied(pieceList)
+            
+            if self.x - 1 >= 0:
+                killLeft = self.gameinfo.board[self.y + yOffset][self.x - 1].isOccupied(pieceList)
+            if self.x + 1 < 8:
+                killRight = self.gameinfo.board[self.y + yOffset][self.x + 1].isOccupied(pieceList)
 
             if killLeft:
                 moveset.append(self.gameinfo.board[self.y + yOffset][self.x - 1])
@@ -198,8 +202,12 @@ class Rook(Piece):
         return moveset
     
     def castle(self):
-        #TODO add logic and call this method from king move
-        pass
+        if self.x == 0: 
+            newX = 3
+        else:
+            newX = 5
+        newPOS = Position(newX, self.y)
+        self.move(newPOS)
             
     def __str__(self):
         return f'{self.side} Rook {self.gameinfo.board[self.y][self.x]}'
@@ -303,8 +311,14 @@ class King(Piece):
         self.firstMove = True
 
     def move(self, option):
-        #TODO check if move was a castle then call the rooks castle function
+        if abs(option.x - self.x) > 1:
+            if option.x == 2:
+                rookObj = self.gameinfo.board[self.y][0].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
+            else:
+                rookObj = self.gameinfo.board[self.y][7].isOccupied(self.gameinfo.blackList + self.gameinfo.whiteList)
 
+            if rookObj:
+                rookObj.castle()
         super().move(option)
 
         self.firstMove = False
